@@ -89,6 +89,49 @@ class PageFileTest {
     }
 
     @Test
+    @DisplayName("Allocate several pages in sequence and verifies that the returned page IDs are consistent and unique.")
+    void allocateSeveralPages() throws IOException {
+        int first = pageFile.allocatePage();
+        int second = pageFile.allocatePage();
+        int third = pageFile.allocatePage();
+        int fourth = pageFile.allocatePage();
+        assertEquals(0, first);
+        assertEquals(1, second);
+        assertEquals(2, third);
+        assertEquals(3, fourth);
+        assertEquals(4, pageFile.getPageCount());
+    }
+
+    @Test
+    @DisplayName("Allocate multiple pages and verify consistancy after reopening")
+    void allocateMultiplePagesAndVerifyConsistancyAfterReopening() throws IOException {
+        pageFile.allocatePage();
+        pageFile.allocatePage();
+        pageFile.allocatePage();
+        pageFile.close();
+        pageFile = null;
+
+        // Reopen the same database file
+        try (PageFile reopenedPageFile = new PageFile(dbFile)) {
+            assertEquals(3, reopenedPageFile.getPageCount());
+
+        }
+    }
+
+    @Test
+    @DisplayName("If the current API supports reopening the same file, test that allocating one more page after reopening returns the next expected page ID and increases the page count by one. Avoid adding this test if the current class contract does not allow the file to be reopened that way; document the limitation instead.")
+    void testAllocateOneMorePageAfterReopening() throws IOException {
+        pageFile.allocatePage();
+        pageFile.close();
+        try (PageFile reopenedPageFile = new PageFile(dbFile)) {
+            assertEquals(1, reopenedPageFile.getPageCount());
+            int page1 = reopenedPageFile.allocatePage();
+            assertEquals(1, page1);
+            assertEquals(2, reopenedPageFile.getPageCount());
+        }
+    }
+
+    @Test
     @DisplayName("Multiple pages maintain distinct content without cross-page corruption")
     void testMultiplePagesIsolation() throws IOException {
         int page0 = pageFile.allocatePage();
